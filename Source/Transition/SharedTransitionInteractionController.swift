@@ -25,6 +25,8 @@ class SharedTransitionInteractionController: NSObject {
 
     // MARK: Private properties
 
+    private var alreadyFinished = false
+    private var alreadyCancelled = false
     private var config: SharedTransitionConfig = .interactive
     private var context: Context?
 }
@@ -32,6 +34,8 @@ class SharedTransitionInteractionController: NSObject {
 // MARK: - UIViewControllerInteractiveTransitioning
 
 extension SharedTransitionInteractionController: UIViewControllerInteractiveTransitioning {
+    var wantsInteractiveStart: Bool { false }
+
     func startInteractiveTransition(_ transitionContext: UIViewControllerContextTransitioning) {
         prepareViewController(from: transitionContext)
 
@@ -75,6 +79,14 @@ extension SharedTransitionInteractionController: UIViewControllerInteractiveTran
         fromView.mask = mask
         toView.addSubview(placeholder)
         toView.addSubview(overlay)
+
+        if alreadyFinished {
+            finish()
+        }
+
+        if alreadyCancelled {
+            cancel()
+        }
     }
 }
 
@@ -94,7 +106,10 @@ extension SharedTransitionInteractionController {
     }
 
     func cancel() {
-        guard let context else { return }
+        guard let context else {
+            alreadyCancelled = true
+            return
+        }
         context.transitionContext.cancelInteractiveTransition()
         let maskRadius = config.maskCornerRadius
         let overlayOpacity = config.overlayOpacity
@@ -112,7 +127,10 @@ extension SharedTransitionInteractionController {
     }
 
     func finish() {
-        guard let context else { return }
+        guard let context else {
+            alreadyFinished = true
+            return
+        }
         context.transitionContext.finishInteractiveTransition()
         let maskFrame = context.toFrame.aspectFit(to: context.fromFrame)
         UIView.animate(duration: config.duration, curve: config.curve) {
